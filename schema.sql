@@ -1,0 +1,20 @@
+CREATE TABLE recalls (
+    recall_id TEXT PRIMARY KEY,
+    event_id TEXT,
+    status TEXT,
+    classification TEXT,
+    product_type TEXT,
+    recalling_firm TEXT,
+    city TEXT,
+    state TEXT,
+    country TEXT,
+    product_description TEXT,
+    reason_for_recall TEXT,
+    distribution_pattern TEXT,
+    voluntary_mandated TEXT,
+    recall_initiation_date DATE,
+    report_date DATE,
+    source_agency TEXT DEFAULT 'FDA',
+    raw_payload JSONB,
+    last_seen_at TIMESTAMP DEFAULT now()
+);
