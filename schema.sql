@@ -18,3 +18,12 @@ CREATE TABLE recalls (
     raw_payload JSONB,
     last_seen_at TIMESTAMP DEFAULT now()
 );
+
+
+CREATE TABLE poller_state (
+    id INT PRIMARY KEY DEFAULT 1,
+    last_polled_at TIMESTAMP,
+    CHECK (id = 1)
+);
+
+INSERT INTO poller_state (id, last_polled_at) VALUES (1, NULL);
