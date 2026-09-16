@@ -1,0 +1,22 @@
+[project]
+name = "recall-monitor"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "sqlalchemy",
+    "psycopg2-binary",
+    "python-dotenv",
+    "fastapi",
+    "uvicorn[standard]",
+    "pyjwt[crypto]",
+]
+
+[tool.setuptools]
+packages = ["adapters", "api", "api.routers", "db", "ingestion", "jobs", "matching", "normalization", "notifications", "receipts"]
+
+[project.optional-dependencies]
+dev = ["pytest", "httpx"]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
