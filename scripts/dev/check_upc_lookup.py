@@ -1,4 +1,4 @@
-# scripts/test_upc_lookup.py
+# scripts/dev/check_upc_lookup.py
 from db.session import SessionLocal
 from db.models import ReceiptItem
 from matching.upc_lookup import find_by_upc

@@ -1,4 +1,4 @@
-# scripts/run_matcher.py
+# scripts/dev/run_matcher.py
 from db.session import SessionLocal
 from db.models import ReceiptItem, MatchCandidate
 from matching.matcher import match_receipt_item

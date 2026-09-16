@@ -1,5 +1,7 @@
 # Recall Monitor: Implementation Plan
 
+> **Archived — describes the pre-pivot plan (Docker/K8s/Terraform/RDS direction).** Superseded by `STATUS.md` (repo root) for current state.
+
 Constraints locked in: openFDA food enforcement only, email notifications only, one household, no mobile/SMS/dashboards, no LLM-as-matcher, no Kafka/RabbitMQ unless justified, Python/FastAPI/Postgres, 1-2 students.
 
 ---

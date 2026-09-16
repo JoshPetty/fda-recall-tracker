@@ -2,13 +2,21 @@
 
 Last updated: after adding structured location data for recalls (`recall_states` + `is_nationwide`/`parse_status` on `recalls`, parsed out of the free-text `geographic_scope` field) and a state filter on recall browsing.
 
+## Repo layout
+
+Restructured (this session), file organization only, no logic changes:
+
+- `recall-monitor-app` moved out to a true sibling directory (see "Mobile app" below) instead of nesting inside this repo.
+- `scripts/` split into `scripts/ops/` (real, rerunnable, documented tools: `backfill_normalized_names.py`, `backfill_recall_states.py`) and `scripts/dev/` (exploratory/debug scripts: `fetch_fixtures.py`, `seed_receipt_items.py`, `run_matcher.py`, `check_upc_lookup.py` — renamed from `test_upc_lookup.py`, since it's a manual debug script, not a pytest test, and the old name risked pytest collecting and running it against the live Supabase database if `pytest` were ever invoked from the repo root instead of scoped to `tests/`).
+- `recall-monitor-build-plan.md` moved to `docs/archive/recall-monitor-build-plan.md`, with a note at its top that it's superseded by this file.
+
 ## Stack
 
 - Backend logic (ingestion + matching): Python, unchanged since Phase 1-2.
 - Database: Supabase (managed Postgres). Migration complete, schema applied, in active use. Local Docker Postgres no longer in use.
 - Connection: Supabase session pooler (`aws-0-us-east-1.pooler.supabase.com:5432`), not the direct connection endpoint (`db.<ref>.supabase.co`), because the direct endpoint resolves IPv6-only and this network environment has no outbound IPv6 route.
 - Python code execution location: not yet decided/set up. Currently run manually from a local machine, not on any scheduled host.
-- Mobile app: Expo, at `recall-monitor-app` (nested inside `recall-monitor`, not a sibling directory as this file previously said — corrected after checking directly; there's also an unrelated, unused sibling `recall-monitor-app` template scaffold one level up, don't confuse the two). `create-expo-app` blank-typescript template, Expo SDK 57, Expo Router 57, TypeScript. NativeWind and `@react-native-community/netinfo` are still just targeted, not yet added.
+- Mobile app: Expo, at `~/projects/recall-monitor-app` — a true sibling directory of `recall-monitor`, and its own git repo (moved out of nested `recall-monitor/recall-monitor-app` during the repo-layout restructure; prior history for it lives in `recall-monitor` at commit `62c0ea4` and earlier). The unrelated, unused scaffold that previously sat at that same sibling path was renamed out of the way first, to `~/projects/_unused-expo-scaffold-sep16`, so it doesn't get confused with the real app. `create-expo-app` blank-typescript template, Expo SDK 57, Expo Router 57, TypeScript. NativeWind and `@react-native-community/netinfo` are still just targeted, not yet added.
 - Backend API: FastAPI, at `api/main.py`. One endpoint so far (`POST /match`, see "Paste-text receipt flow" below). Run locally with `uvicorn api.main:app` (add `--reload` for dev); no deployment/infra yet, matches how ingestion is currently run manually.
 - OCR: Tesseract (local), prototyped standalone (`receipts/ocr.py`), not wired into a pipeline. AWS Textract was evaluated and not used, after AWS account access issues.
 - Auth: Supabase Auth magic-link sign-in wired into the Expo app (see "Auth (Expo app)" below). `users` table migration from standalone identity table to a profile table referencing `auth.users.id` is written and applied.
@@ -64,10 +72,10 @@ Unchanged in logic from before the Supabase migration: `adapters/openfda_food.py
 - Unrelated, pre-existing issue noticed while running the full test suite for this change: `tests/unit/test_openfda_food_adapter.py::test_normalize_with_multiple_upcs` fails on a timezone-aware vs. naive `datetime` comparison (`_parse_date` in `adapters/openfda_food.py` now returns tz-aware datetimes, the test asserts against a naive one). Not touched by this change, not fixed here — flagging since it showed up in the same `pytest` run as the new `test_geo_parse.py` tests (which all pass).
 - `ingestion/run_ingestion.py`: new `sync_recall_states(session, recall, geographic_scope)`, called from both branches of `upsert_canonical` (new recall, and existing recall) — unconditionally, the same way `product_name_normalized` is unconditionally recomputed, so a future fix to the parser gets picked up on the next ingestion run instead of staying silently stale on old rows. Takes `geographic_scope` as an explicit argument rather than reading it off the ORM object, because in the existing-recall path the object's `geographic_scope` is still the *old* value at the point it's called (the field update happens later in that function) — reading it directly would have silently parsed stale text on the one run where the location actually changed. (Caught this while writing it, not after — flagging because it's the kind of bug that only shows up on a recall whose distribution area is later corrected/expanded, which is easy to miss in testing.)
 
-**Backfill — `scripts/backfill_recall_states.py`**, matching the shape of `scripts/backfill_normalized_names.py`. **Not run against Supabase**, since it depends on `66f2630fb756` (above), which isn't applied yet — running it now would fail (`recall_states` doesn't exist, `recalls.is_nationwide`/`parse_status` don't exist). Two things stand in for "did I run it" until you apply the migration and this can run for real:
+**Backfill — `scripts/ops/backfill_recall_states.py`**, matching the shape of `scripts/ops/backfill_normalized_names.py`. **Not run against Supabase**, since it depends on `66f2630fb756` (above), which isn't applied yet — running it now would fail (`recall_states` doesn't exist, `recalls.is_nationwide`/`parse_status` don't exist). Two things stand in for "did I run it" until you apply the migration and this can run for real:
 - Ran the actual parsing logic (`parse_geographic_scope`, unmodified) read-only against all 1,357 real `geographic_scope` values currently in the `recalls` table (via a plain `SELECT`, no writes) to get real numbers: **1,020 parsed, 309 nationwide, 28 unparsed** (75.2% / 22.8% / 2.1%). Spot-checked every distinct unparsed value (23 of them) — genuinely unparseable free text (e.g. "Products are sold directly to consumers via firm's online website.", city names with no state, "Puerto Rico" alone — a territory, correctly not treated as one of the 50 states).
 - Separately smoke-tested the backfill script's actual write path (the delete-old/insert-new `recall_states` rows, `is_nationwide`/`parse_status` assignment) against a throwaway in-memory SQLite database seeded with real `geographic_scope` samples pulled read-only from Supabase — confirming the ORM writes work end to end, including both collision cases above, and that a second pass is a no-op (idempotent, 0 rows touched). This never touched Supabase.
-- Once you've applied `66f2630fb756`, run `scripts/backfill_recall_states.py` for real — it prints the same parsed/nationwide/unparsed breakdown as it runs.
+- Once you've applied `66f2630fb756`, run `scripts/ops/backfill_recall_states.py` for real — it prints the same parsed/nationwide/unparsed breakdown as it runs.
 
 ## Matching engine
 
@@ -81,7 +89,7 @@ Unchanged in logic from before the Supabase migration: `matching/upc_lookup.py`,
 - `app/login.tsx`: email input, "Send magic link" button, "check your email" confirmation state.
 - `app/(app)/_layout.tsx`: protected route group, now gating only `scan.tsx` (the paste-text product-check screen) since the home screen and recall screens moved out — see below.
 - `app/index.tsx`: home screen, now public (moved out of `(app)`). Signed out: recall-browsing copy, a "Browse recalls" link, and a "Sign in" link. Signed in: unchanged from before — email, "View recalls", "Check a product" (still gated, see below), sign out.
-- Real `EXPO_PUBLIC_SUPABASE_ANON_KEY` (a Supabase publishable key, not the legacy `anon` key, though the env var name was kept as-is) has been put into `recall-monitor-app/.env`, replacing the earlier placeholder.
+- Real `EXPO_PUBLIC_SUPABASE_ANON_KEY` (a Supabase publishable key, not the legacy `anon` key, though the env var name was kept as-is) has been put into `recall-monitor-app`'s `.env` (now a sibling repo, see "Mobile app" above), replacing the earlier placeholder.
 
 ## Recall browse/detail screens (first real app screens)
 
@@ -98,7 +106,7 @@ This relies on the new `1a0a76ba3dbc_grant_recalls_select_to_anon` migration (se
 **Testing:** `npx tsc --noEmit` and `npx expo export -p web` both pass with the filter added. Whether the filter actually *works* against real data is **not verified** — it depends on the `66f2630fb756_add_recall_states` migration (see "Database" above), which isn't applied yet, so `recall_states` doesn't exist in the live database right now. What was verified instead, driving the actual running app the same way as the signed-out check above:
 - With no session, at `/recalls`: the filter button and options list render correctly, showing "All states" / "Nationwide" / "Unknown or other" with no state codes listed (expected — the `recall_states` fetch gets a real `404` from PostgREST, `"Could not find the table 'public.recall_states'"`, handled by the existing `if (statesError || !data) return;` guard, so it just leaves the state list empty rather than crashing).
 - Selecting "Nationwide" updates the button label and issues the expected query (`.../recalls?...&is_nationwide=eq.true...`), which comes back as a real `400` from PostgREST (`"column recalls.is_nationwide does not exist"`) — rendered through the screen's existing error-text path, not a crash. This confirms the query-building code itself is wired correctly (right table, right column, right join syntax for the state case), and that it fails the same way the rest of this feature currently does: gracefully, waiting on the pending migration, not with a broken UI.
-- Did not verify: actual filtered results rendering with real data once `recall_states` is populated (needs the migration applied plus `scripts/backfill_recall_states.py` run for real) — do that once you've applied `66f2630fb756`.
+- Did not verify: actual filtered results rendering with real data once `recall_states` is populated (needs the migration applied plus `scripts/ops/backfill_recall_states.py` run for real) — do that once you've applied `66f2630fb756`.
 
 **Testing:** could not complete a full click-through of the running app (home → recalls list → recall detail) as an authenticated user, because that requires clicking a magic-link email and I don't have access to the target inbox (`joshuapetty@live.com`) — same auth-flow blocker already logged above. Verified instead:
 - `npx tsc --noEmit` passes clean.
@@ -124,7 +132,7 @@ This confirms the query/RLS path works for an authenticated session, but the act
 
 **Not yet verified:** a full magic-link round trip actually landing on the authenticated home screen; whether the URL Configuration change actually fixes the redirect. (RLS is applied and behaving correctly — see the corrected note under "Database" above; this line used to say otherwise.)
 
-**New discovery while testing the paste-text flow below:** a `households`/`users` row now exists for the real `auth.users` row (`joshuapetty@live.com`), named "Test Household" — the same naming convention as `scripts/seed_receipt_items.py`'s throwaway household, so this was likely created by running that script (or something like it) against the real auth id rather than by an actual completed magic-link sign-up. Onboarding still isn't wired up client-side (see "Not started"); this row just happens to make household-scoped testing possible right now. Didn't touch it either way.
+**New discovery while testing the paste-text flow below:** a `households`/`users` row now exists for the real `auth.users` row (`joshuapetty@live.com`), named "Test Household" — the same naming convention as `scripts/dev/seed_receipt_items.py`'s throwaway household, so this was likely created by running that script (or something like it) against the real auth id rather than by an actual completed magic-link sign-up. Onboarding still isn't wired up client-side (see "Not started"); this row just happens to make household-scoped testing possible right now. Didn't touch it either way.
 
 ## Paste-text receipt flow (first backend API + first read/write app flow)
 
@@ -165,7 +173,7 @@ This confirms the query/RLS path works for an authenticated session, but the act
 
 ## Not started
 
-- Applying/reviewing the `66f2630fb756_add_recall_states` migration (see "Database" above) — once applied, run `scripts/backfill_recall_states.py` for real (only simulated/smoke-tested so far, see "Ingestion pipeline") and re-verify the state filter against real filtered results (only the pre-migration graceful-failure path has been verified so far, see "Recall browse/detail screens")
+- Applying/reviewing the `66f2630fb756_add_recall_states` migration (see "Database" above) — once applied, run `scripts/ops/backfill_recall_states.py` for real (only simulated/smoke-tested so far, see "Ingestion pipeline") and re-verify the state filter against real filtered results (only the pre-migration graceful-failure path has been verified so far, see "Recall browse/detail screens")
 - Applying/reviewing the `1a0a76ba3dbc_grant_recalls_select_to_anon` migration (see "Database" above) — once applied, worth a quick re-check that real recall rows render for a signed-out visitor at `/recalls`, not just the empty-state plumbing already verified
 - Confirming a full magic-link round trip after the redirect-URL config change (blocked on the email rate limit resetting, or setting up custom SMTP)
 - Verifying cross-household isolation actually holds under the applied RLS migration (`2f082500b25a` — applied, see Database section, but the multi-household scenario itself hasn't been tested)
