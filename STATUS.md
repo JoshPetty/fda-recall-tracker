@@ -6,7 +6,7 @@ Last updated: after adding structured location data for recalls (`recall_states`
 
 Restructured (this session), file organization only, no logic changes:
 
-- `recall-monitor-app` moved out to a true sibling directory (see "Mobile app" below) instead of nesting inside this repo.
+- `recall-monitor-app` lives nested inside this repo, as a deliberate monorepo (see "Mobile app" below) — briefly split out to a sibling repo and reverted the same session, since backend and app share one schema and one status doc, and for a single-person project this size the coordination overhead of two repos outweighed the separation. Its brief sibling-repo history (one commit) was discarded, not merged, on revert.
 - `scripts/` split into `scripts/ops/` (real, rerunnable, documented tools: `backfill_normalized_names.py`, `backfill_recall_states.py`) and `scripts/dev/` (exploratory/debug scripts: `fetch_fixtures.py`, `seed_receipt_items.py`, `run_matcher.py`, `check_upc_lookup.py` — renamed from `test_upc_lookup.py`, since it's a manual debug script, not a pytest test, and the old name risked pytest collecting and running it against the live Supabase database if `pytest` were ever invoked from the repo root instead of scoped to `tests/`).
 - `recall-monitor-build-plan.md` moved to `docs/archive/recall-monitor-build-plan.md`, with a note at its top that it's superseded by this file.
 
@@ -16,7 +16,7 @@ Restructured (this session), file organization only, no logic changes:
 - Database: Supabase (managed Postgres). Migration complete, schema applied, in active use. Local Docker Postgres no longer in use.
 - Connection: Supabase session pooler (`aws-0-us-east-1.pooler.supabase.com:5432`), not the direct connection endpoint (`db.<ref>.supabase.co`), because the direct endpoint resolves IPv6-only and this network environment has no outbound IPv6 route.
 - Python code execution location: not yet decided/set up. Currently run manually from a local machine, not on any scheduled host.
-- Mobile app: Expo, at `~/projects/recall-monitor-app` — a true sibling directory of `recall-monitor`, and its own git repo (moved out of nested `recall-monitor/recall-monitor-app` during the repo-layout restructure; prior history for it lives in `recall-monitor` at commit `62c0ea4` and earlier). The unrelated, unused scaffold that previously sat at that same sibling path was renamed out of the way first, to `~/projects/_unused-expo-scaffold-sep16`, so it doesn't get confused with the real app. `create-expo-app` blank-typescript template, Expo SDK 57, Expo Router 57, TypeScript. NativeWind and `@react-native-community/netinfo` are still just targeted, not yet added.
+- Mobile app: Expo, at `recall-monitor-app` (nested inside `recall-monitor` — a deliberate monorepo, see "Repo layout" above). An unrelated, unused scaffold that briefly sat at the sibling path `~/projects/recall-monitor-app` during this session's repo-layout experiment has been permanently moved aside to `~/projects/_unused-expo-scaffold-sep16` — don't confuse the two if that path ever gets reused. `create-expo-app` blank-typescript template, Expo SDK 57, Expo Router 57, TypeScript. NativeWind and `@react-native-community/netinfo` are still just targeted, not yet added.
 - Backend API: FastAPI, at `api/main.py`. One endpoint so far (`POST /match`, see "Paste-text receipt flow" below). Run locally with `uvicorn api.main:app` (add `--reload` for dev); no deployment/infra yet, matches how ingestion is currently run manually.
 - OCR: Tesseract (local), prototyped standalone (`receipts/ocr.py`), not wired into a pipeline. AWS Textract was evaluated and not used, after AWS account access issues.
 - Auth: Supabase Auth magic-link sign-in wired into the Expo app (see "Auth (Expo app)" below). `users` table migration from standalone identity table to a profile table referencing `auth.users.id` is written and applied.
@@ -89,7 +89,7 @@ Unchanged in logic from before the Supabase migration: `matching/upc_lookup.py`,
 - `app/login.tsx`: email input, "Send magic link" button, "check your email" confirmation state.
 - `app/(app)/_layout.tsx`: protected route group, now gating only `scan.tsx` (the paste-text product-check screen) since the home screen and recall screens moved out — see below.
 - `app/index.tsx`: home screen, now public (moved out of `(app)`). Signed out: recall-browsing copy, a "Browse recalls" link, and a "Sign in" link. Signed in: unchanged from before — email, "View recalls", "Check a product" (still gated, see below), sign out.
-- Real `EXPO_PUBLIC_SUPABASE_ANON_KEY` (a Supabase publishable key, not the legacy `anon` key, though the env var name was kept as-is) has been put into `recall-monitor-app`'s `.env` (now a sibling repo, see "Mobile app" above), replacing the earlier placeholder.
+- Real `EXPO_PUBLIC_SUPABASE_ANON_KEY` (a Supabase publishable key, not the legacy `anon` key, though the env var name was kept as-is) has been put into `recall-monitor-app/.env`, replacing the earlier placeholder.
 
 ## Recall browse/detail screens (first real app screens)
 
