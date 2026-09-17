@@ -4,3 +4,6 @@ __pycache__/
 *.pyc
 recall_monitor.egg-info/
 .pytest_cache/
+BACKEND.md
+FRONTEND.md
+STATUS.md
