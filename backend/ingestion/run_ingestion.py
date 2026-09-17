@@ -2,11 +2,11 @@ import hashlib
 import json
 from datetime import datetime, timedelta, timezone
 
-from adapters.openfda_food import OpenFDAFoodAdapter
-from db.models import Recall, RawIngestion, RecallHistory, IngestionRun, RecallUpc, RecallState
-from db.session import SessionLocal
-from normalization.geo_parse import parse_geographic_scope
-from normalization.text_normalize import normalize_text
+from backend.adapters.openfda_food import OpenFDAFoodAdapter
+from backend.db.models import Recall, RawIngestion, RecallHistory, IngestionRun, RecallUpc, RecallState
+from backend.db.session import SessionLocal
+from backend.normalization.geo_parse import parse_geographic_scope
+from backend.normalization.text_normalize import normalize_text
 
 SOURCE = "openfda_food"
 

@@ -8,13 +8,13 @@ from jwt import PyJWKClient
 from pydantic import BaseModel
 
 from config import SUPABASE_URL
-from db.models import Receipt, ReceiptItem, Recall, User
-from db.session import SessionLocal
-from matching.matcher import match_receipt_item
-from normalization.text_normalize import normalize_text
+from backend.db.models import Receipt, ReceiptItem, Recall, User
+from backend.db.session import SessionLocal
+from backend.matching.matcher import match_receipt_item
+from backend.normalization.text_normalize import normalize_text
 
 # Sentinel `image_s3_key` marking the one reused "manual entries" receipt per
-# household (see api/main.py POST /match), rather than creating a new
+# user (see api/main.py POST /match), rather than creating a new
 # receipts row per pasted item. `receipts.image_s3_key`/`retention_expires_at`
 # are NOT NULL columns designed for photo receipts; there is no image here,
 # so these are placeholders, not real S3/retention data.
@@ -81,23 +81,23 @@ def match(payload: MatchRequest, user_id: uuid.UUID = Depends(get_current_user_i
 
     session = SessionLocal()
     try:
-        # household_id is looked up server-side from the verified JWT's user
-        # id, never taken from the request body.
+        # user_id is looked up server-side from the verified JWT's user id,
+        # never taken from the request body.
         user = session.query(User).filter_by(id=user_id).first()
         if user is None:
             raise HTTPException(
                 status_code=403,
-                detail="No household profile found for this account.",
+                detail="No profile found for this account.",
             )
 
         receipt = (
             session.query(Receipt)
-            .filter_by(household_id=user.household_id, image_s3_key=MANUAL_ENTRY_IMAGE_KEY)
+            .filter_by(user_id=user.id, image_s3_key=MANUAL_ENTRY_IMAGE_KEY)
             .first()
         )
         if receipt is None:
             receipt = Receipt(
-                household_id=user.household_id,
+                user_id=user.id,
                 uploaded_by_user_id=user.id,
                 image_s3_key=MANUAL_ENTRY_IMAGE_KEY,
                 ocr_status="manual",

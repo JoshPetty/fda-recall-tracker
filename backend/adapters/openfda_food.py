@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 import requests
 import re
 
-from adapters.base import RecallSourceAdapter, RawRecord, CanonicalRecall
+from backend.adapters.base import RecallSourceAdapter, RawRecord, CanonicalRecall
 
 OPENFDA_URL = "https://api.fda.gov/food/enforcement.json"
 

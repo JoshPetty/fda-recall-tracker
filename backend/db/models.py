@@ -128,14 +128,6 @@ class RecallHistory(Base):
     changed_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
 
-class Household(Base):
-    __tablename__ = "households"
-
-    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
-    name = Column(Text, nullable=False)
-    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
-
-
 class User(Base):
     """Profile table keyed off Supabase Auth.
 
@@ -148,7 +140,6 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(UUID(as_uuid=True), ForeignKey("auth.users.id", ondelete="CASCADE"), primary_key=True)
-    household_id = Column(UUID(as_uuid=True), ForeignKey("households.id"), nullable=False)
     email = Column(Text, nullable=False, unique=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
@@ -157,7 +148,7 @@ class Receipt(Base):
     __tablename__ = "receipts"
 
     id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
-    household_id = Column(UUID(as_uuid=True), ForeignKey("households.id"), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     uploaded_by_user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     image_s3_key = Column(Text, nullable=False)
     uploaded_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())

@@ -1,13 +1,13 @@
 from sqlalchemy import text
 
-from db.models import MatchCandidate, Recall, ReceiptItem
-from matching.upc_lookup import find_by_upc
-from matching.scoring import brand_score, date_proximity_score, combine_confidence
+from backend.db.models import MatchCandidate, Recall, ReceiptItem
+from backend.matching.upc_lookup import find_by_upc
+from backend.matching.scoring import brand_score, date_proximity_score, combine_confidence
 from sqlalchemy import text
 
-from db.models import MatchCandidate, Recall, ReceiptItem
-from matching.upc_lookup import find_by_upc
-from matching.scoring import brand_score, date_proximity_score, combine_confidence
+from backend.db.models import MatchCandidate, Recall, ReceiptItem
+from backend.matching.upc_lookup import find_by_upc
+from backend.matching.scoring import brand_score, date_proximity_score, combine_confidence
 SURFACE_THRESHOLD = 0.5
 AUTO_CONFIRM_THRESHOLD = 0.85
 FUZZY_SIMILARITY_FLOOR = 0.3

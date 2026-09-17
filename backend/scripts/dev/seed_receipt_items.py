@@ -1,21 +1,20 @@
 from datetime import date, datetime, timezone
 
 from db.session import SessionLocal
-from db.models import Household, User, Receipt, ReceiptItem, Recall
+from db.models import User, Receipt, ReceiptItem, Recall
 from normalization.text_normalize import normalize_text
 
 session = SessionLocal()
 
-household = Household(name="Test Household")
-session.add(household)
-session.flush()
-
-user = User(household_id=household.id, email="test@example.com")
+# NOTE: users.id has no server default (it must match a real auth.users.id,
+# see cc71d2485e36) -- this was already true before the household removal,
+# so this insert relies on the same pre-existing gap it always did.
+user = User(email="test@example.com")
 session.add(user)
 session.flush()
 
 receipt = Receipt(
-    household_id=household.id,
+    user_id=user.id,
     uploaded_by_user_id=user.id,
     image_s3_key="seed/fake.jpg",
     ocr_status="done",

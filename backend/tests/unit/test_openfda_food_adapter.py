@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from adapters.base import RawRecord
-from adapters.openfda_food import OpenFDAFoodAdapter
+from backend.adapters.base import RawRecord
+from backend.adapters.openfda_food import OpenFDAFoodAdapter
 
 FIXTURE_DIR = Path(__file__).parent.parent / "fixtures" / "openfda_food"
 

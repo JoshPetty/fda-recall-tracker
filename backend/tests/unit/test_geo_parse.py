@@ -1,5 +1,5 @@
 # tests/unit/test_geo_parse.py
-from normalization.geo_parse import parse_geographic_scope
+from backend.normalization.geo_parse import parse_geographic_scope
 
 
 def test_signal_phrase_abbreviation_list():
